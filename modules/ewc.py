@@ -6,6 +6,8 @@ import trainer.utils.train as tutils
 from torch import nn
 from torch.autograd import Variable
 
+from utils import batch_to_device
+
 
 def variable(t: torch.Tensor, device, **kwargs):
     t = t.to(device)
@@ -42,7 +44,7 @@ class EWC(object):
         model.eval()
         for batch in dataloader:
             model.zero_grad()
-            batch = tutils.iter_to_device(batch, device)
+            batch = batch_to_device(batch, device)
             output, _ = model(**batch)
 
             label = output.max(1)[1].view(-1)

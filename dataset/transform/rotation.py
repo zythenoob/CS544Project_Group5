@@ -51,9 +51,6 @@ class FixedRotation(object):
 
         self.generator = get_generator(seed)
         self.degrees = torch.randint(low=deg_min, high=deg_max, size=(1,), generator=self.generator).item()
-        # reverse
-        if torch.rand(size=(1,)).item() > 0.5:
-            self.degrees *= -1
 
     def __call__(self, x: np.ndarray) -> np.ndarray:
         """

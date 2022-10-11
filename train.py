@@ -1,97 +1,64 @@
-import argparse
-from pathlib import Path
-
 import torch
 from sklearn.metrics import accuracy_score
-from torch.optim import SGD, Adam
-import trainer.utils.train as tutils
-from torch.utils.data import DataLoader
+from torch.optim import SGD
 from tqdm import tqdm
 
-from configs import SCModelConfig, SCTrainConfig
-from dataset.dataset import SurpriseScheduler, SurpriseMNIST
+from configs import ModelConfig, TrainConfig
+from dataset.dataset import TaskStream
 from model import ExpertModel
 from modules.ewc import EWC
 from modules.memory import Buffer
+from utils import batch_to_device
 
 
-class SurpriseConsolidation:
+class ContinualNLP:
     def __init__(self, train_config, model_config):
         self.train_config = train_config
         self.device = train_config.device
-        self.data_scheduler = SurpriseScheduler(train_config)
-        self.model = ExpertModel(model_config, head_size=self.data_scheduler.head_size).to(self.device)
-        self.memory = Buffer(buffer_size=train_config.memory_size, device='cpu')
+        self.task_stream = TaskStream(train_config)
+        # model
+        self.model = ExpertModel(
+            model_config,
+            seq_len=self.task_stream.seq_len,
+            head_size=self.task_stream.n_classes
+        ).to(self.device)
+        self.buffer = Buffer(buffer_size=train_config.buffer_size, device='cpu')
         self.ewc = EWC(device=self.device)
         self.optimizer = SGD(self.model.parameters(), lr=train_config.lr)
 
-        self.boundary_detected = []
-
     def run(self):
-        while len(self.data_scheduler) < self.train_config.n_tasks:
+        for t in range(self.task_stream.n_tasks):
+            self.task_stream.new_task()
+            train_loader = self.task_stream.train_loader
             self.model.update(self.ewc)
-            buffer = self.train_loop(self.data_scheduler)
+            self.train_loop(train_loader, task=t)
             # ewc
-            buffer_dataloader = DataLoader(buffer.to_dataset(), shuffle=False, batch_size=self.train_config.batch_size)
-            self.ewc.update(self.model, buffer_dataloader)
+            self.ewc.update(self.model, train_loader)
             # # memory
             # self.memory.add_data(*buffer.get_all_data())
             # evaluate
-            self.evaluate(val_loaders=self.data_scheduler.val_loaders[:-1])
+            self.evaluate(val_loaders=self.task_stream.val_loaders)
 
-    def train_loop(self, data_scheduler):
+    def train_loop(self, train_dataloader, task=0):
         model = self.model
         device = self.device
-        optimizer = self.optimizer
-        # surprise
         epochs = self.train_config.epochs
-        switch_epochs = self.train_config.surprise_interval
-        check_epoch = self.train_config.surprise_check_epochs
-        context_switch = False
-        manual_switch = False
-        # reservoir buffer for expert training
-        buffer = Buffer(buffer_size=train_config.buffer_size, device='cpu')
-        print('surprises:', data_scheduler.surprises)
-        tqdm_bar = tqdm(range(epochs), desc='Training')
-        for e in tqdm_bar:
-            if data_scheduler.interval == data_scheduler.surprise_interval:
-                data_scheduler.make_surprise()
-                manual_switch = True
+        optimizer = self.optimizer
 
-            for batch in data_scheduler.train_loader:
-                batch = tutils.iter_to_device(batch, device)
-                logits, loss, task_loss = model(**batch)
-                # check for surprise
-                if e > check_epoch:
-                    context_switch, z_scores = model.surprise_check(task_loss)
+        tqdm_bar = tqdm(range(epochs), desc=f'Training task {task}')
+        for e in tqdm_bar:
+            for batch in train_dataloader:
+                batch = batch_to_device(batch, device)
+                logits, loss = model(**batch)
 
                 optimizer.zero_grad()
-                if not context_switch and not manual_switch:
-                    loss.backward()
-                    optimizer.step()
-                    buffer.add_data(batch['x'], batch['y'], logits.detach())
-                    tqdm_bar.set_postfix(loss=loss.item())
-                elif context_switch:
-                    print(f'Context switch! z_scores={z_scores}')
-                    break
-                elif manual_switch:
-                    print(f'Manual switch! z_scores={z_scores}')
-                    break
-
-            if context_switch or manual_switch:
-                model.end_task(SurpriseMNIST.HEAD_SIZE)
-                self.boundary_detected.append(context_switch == manual_switch)
-                if not manual_switch:
-                    data_scheduler.make_surprise()
-                break
-            data_scheduler.interval += 1
-        print(f'Seen {len(data_scheduler.surprises)} tasks, detected {sum(self.boundary_detected)} boundaries. '
-              f'Acc: {sum(self.boundary_detected) / (len(data_scheduler.surprises) - 1)}')
-        return buffer
+                loss.backward()
+                optimizer.step()
+                tqdm_bar.set_postfix(loss=loss.item())
 
     def evaluate(self, val_loaders):
         print()
-        print(f'Evaluating {len(val_loaders)} tasks')
+        print('Evaluating')
         total_acc = 0
         for i, vl in enumerate(val_loaders):
             y_pred, y_true = self.get_preds(self.model, val_loader=vl)
@@ -107,7 +74,7 @@ class SurpriseConsolidation:
         model.eval()
         y_pred, y_true = [], []
         for batch in val_loader:
-            batch = tutils.iter_to_device(batch, self.device)
+            batch = batch_to_device(batch, self.device)
             logits = model.get_preds(**batch)
             y_pred.extend(list(logits.detach().argmax(-1).cpu().numpy()))
             y_true.extend(list(batch['y'].cpu().numpy()))
@@ -116,7 +83,7 @@ class SurpriseConsolidation:
 
 
 if __name__ == "__main__":
-    model_config = SCModelConfig()
-    train_config = SCTrainConfig()
-    sc = SurpriseConsolidation(train_config, model_config)
+    model_config = ModelConfig()
+    train_config = TrainConfig()
+    sc = ContinualNLP(train_config, model_config)
     sc.run()
