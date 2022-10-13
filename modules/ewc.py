@@ -2,7 +2,6 @@ from copy import deepcopy
 
 import torch
 import torch.nn.functional as F
-import trainer.utils.train as tutils
 from torch import nn
 from torch.autograd import Variable
 
