@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from transformers import DistilBertForSequenceClassification
 
 
 class LinearModel(nn.Module):
@@ -19,4 +20,6 @@ class LinearModel(nn.Module):
 
 
 def make_backbone(seq_len, n_classes):
-    return LinearModel(seq_len, n_classes)
+    # return LinearModel(seq_len, n_classes)
+    print("make backbone")
+    return DistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", num_labels=n_classes)

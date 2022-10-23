@@ -1,3 +1,7 @@
+import os
+
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+
 import torch
 from sklearn.metrics import accuracy_score
 from torch.optim import SGD
@@ -9,6 +13,7 @@ from model import ExpertModel
 from modules.ewc import EWC
 from modules.memory import Buffer
 from utils import batch_to_device
+from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
 
 
 class ContinualNLP:
@@ -45,12 +50,13 @@ class ContinualNLP:
         epochs = self.train_config.epochs
         optimizer = self.optimizer
 
+        model.backbone.train()
         tqdm_bar = tqdm(range(epochs), desc=f'Training task {task}')
         for e in tqdm_bar:
             for batch in train_dataloader:
                 batch = batch_to_device(batch, device)
-                logits, loss = model(**batch)
-
+                batch["labels"] += task*2
+                logits, loss = model.forward(batch)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -61,7 +67,7 @@ class ContinualNLP:
         print('Evaluating')
         total_acc = 0
         for i, vl in enumerate(val_loaders):
-            y_pred, y_true = self.get_preds(self.model, val_loader=vl)
+            y_pred, y_true = self.get_preds(self.model, val_loader=vl, task = i)
             task_acc = accuracy_score(y_true, y_pred)
             total_acc += task_acc
             print(f'Task {i}, acc {round(task_acc * 100, 2)}')
@@ -70,14 +76,16 @@ class ContinualNLP:
         print()
 
     @torch.no_grad()
-    def get_preds(self, model, val_loader):
+    def get_preds(self, model, val_loader, task):
         model.eval()
         y_pred, y_true = [], []
         for batch in val_loader:
             batch = batch_to_device(batch, self.device)
-            logits = model.get_preds(**batch)
+            batch["labels"] += task * 2
+            # print(batch)
+            logits = model.get_preds(batch)
             y_pred.extend(list(logits.detach().argmax(-1).cpu().numpy()))
-            y_true.extend(list(batch['y'].cpu().numpy()))
+            y_true.extend(list(batch['labels'].cpu().numpy()))
         model.train()
         return y_pred, y_true
 
