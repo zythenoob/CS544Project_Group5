@@ -46,18 +46,20 @@ class ExpertModel(nn.Module):
         loss = task_loss + self.regularization_coef * reg_loss
         return loss
 
-    def forward(self, x, y=None, **ignore_kwargs):
-        logits = self.backbone(x)
-        loss = None
-        if y is not None:
-            loss = self.expert_train_loss(logits, y)
+    def forward(self, x):
+        output = self.backbone(**x)
+        loss = output.loss
+        logits = output.logits
         return logits, loss
 
     @torch.no_grad()
-    def get_preds(self, x, y, **ignore_kwargs):
+    def get_preds(self, x):
         assert not self.training
-        logits = self.backbone(x)
-        return logits
+        output = self.backbone(**x)
+        return output.logits
 
     def update(self, ewc):
         self.ewc = ewc
+
+
+

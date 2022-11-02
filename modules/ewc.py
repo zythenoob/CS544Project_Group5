@@ -44,7 +44,7 @@ class EWC(object):
         for batch in dataloader:
             model.zero_grad()
             batch = batch_to_device(batch, device)
-            output, _ = model(**batch)
+            output, _ = model(batch)
 
             label = output.max(1)[1].view(-1)
             loss = F.nll_loss(F.log_softmax(output, dim=1), label)

@@ -1,29 +1,8 @@
-import random
-
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
-from torchvision.datasets import MNIST, SVHN
-
-from dataset.transform.transforms import make_transform_mnist
-
-SURPRISE = ['raw', 'rot', 'perm', 'svhn']
-# SURPRISE = ['svhn']
-
-
-def create_dataset(configs):
-    dataset_name = configs['dataset']
-    dataset_args = {
-        "root": configs['root'],
-        "download": True
-    }
-    if dataset_name == 'mnist':
-        dataset_class = MNIST
-        transform = make_transform_mnist(configs['task_id'])
-        dataset_args["train"] = configs['split'] == 'train'
-    else:
-        raise NotImplementedError
-    dataset_args["transform"] = transform
-    return dataset_class(**dataset_args)
+import transformers
+from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
+from datasets import load_dataset
 
 
 class BufferDataset(Dataset):
@@ -50,10 +29,8 @@ class TaskStream:
         self.config = config
         self.task_id = 0
         # task
-        self.task_class = SplitMNIST
-        self.task_type = config.task_type
-        assert self.task_type in ["til", "cil"]
-        self.n_classes = self.task_class.HEAD_SIZE * self.task_class.N_TASKS
+        self.task_class = SplitGLUE
+        self.n_classes = sum(self.task_class.dataset_class)
         self.n_tasks = self.task_class.N_TASKS
         self.seq_len = self.task_class.SEQ_LENGTH
 
@@ -62,8 +39,8 @@ class TaskStream:
 
     def new_task(self):
         # create surprise task
-        train_data = self.task_class(root=self.config.dataset_root_path, task_id=self.task_id, split='train')
-        val_data = self.task_class(root=self.config.dataset_root_path, task_id=self.task_id, split='test')
+        train_data = self.task_class(root=self.config.dataset_root_path, task_id=self.task_id, split='train').get_dataset()
+        val_data = self.task_class(root=self.config.dataset_root_path, task_id=self.task_id, split='validation').get_dataset()
 
         self.train_loader = DataLoader(
             train_data,
@@ -87,34 +64,67 @@ class TaskStream:
         return len(self.val_loaders)
 
 
-class SplitMNIST(Dataset):
-    HEAD_SIZE = 2
-    N_TASKS = 5
-    SEQ_LENGTH = 784
+task_to_keys = {
+    "cola": ("sentence", None),
+    "mnli": ("premise", "hypothesis"),
+    "mrpc": ("sentence1", "sentence2"),
+    "qnli": ("question", "sentence"),
+    "qqp": ("question1", "question2"),
+    "rte": ("sentence1", "sentence2"),
+    "sst2": ("sentence", None),
+    "stsb": ("sentence1", "sentence2"),
+    "wnli": ("sentence1", "sentence2"),
+}
 
-    def __init__(self, root, task_id, split):
-        super().__init__()
+tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased")
+
+def create_dataset(configs):
+    return load_dataset("glue", configs["dataset"])[configs['split']]
+
+
+class SplitGLUE:
+    HEAD_SIZE = 2
+    N_TASKS = 10
+    SEQ_LENGTH = 128
+    dataset_list = ['cola', 'sst2', 'mrpc', 'qqp', 'rte']
+    dataset_class = [2, 2, 2, 2, 2]
+    dataset_class_begin = {'cola': 0, 'sst2': 2, 'mrpc': 4, 'qqp': 6, 'rte': 8}
+
+    def __init__(self, root, task_id, split, padding=True):
         self.root = root
         self.split = split
         self.task_id = task_id
+        self.task_name = self.dataset_list[self.task_id]
         # dataset
-        task_args = {'dataset': 'mnist',
-                     'task_id': task_id,
+        task_args = {'dataset': self.task_name,
                      'split': self.split,
                      'root': self.root}
         self.dataset = create_dataset(task_args)
-        # split dataset: use data within certain classes for split task
-        train_mask = np.logical_and(np.array(self.dataset.targets) >= task_id * self.HEAD_SIZE,
-                                    np.array(self.dataset.targets) < (task_id + 1) * self.HEAD_SIZE)
+        sentence1_key, sentence2_key = task_to_keys[self.task_name]
+        max_seq_length = min(128, tokenizer.model_max_length)
 
-        self.dataset.data = self.dataset.data[train_mask]
-        self.dataset.targets = np.array(self.dataset.targets)[train_mask]
+        if padding:
+            padding = "max_length"
+        else:
+            padding = False
 
-    def __getitem__(self, idx):
-        x, y = self.dataset[idx]
-        return {'x': x,
-                'y': y,
-                'task_id': self.task_id}
+        def preprocess_function(examples):
+            args = (
+                (examples[sentence1_key],) if sentence2_key is None else (
+                examples[sentence1_key], examples[sentence2_key])
+            )
+            result = tokenizer(*args, padding=padding, max_length=max_seq_length, truncation=True)
 
-    def __len__(self):
-        return len(self.dataset)
+            return result
+
+        tokenized_datasets = self.dataset.map(preprocess_function, batched=True)
+        tokenized_datasets = tokenized_datasets.remove_columns(
+            ['idx'] + [x for x in task_to_keys[self.task_name] if x != None])
+        tokenized_datasets = tokenized_datasets.rename_column("label", "labels")
+        tokenized_datasets.set_format("torch")
+
+        small_train_dataset = tokenized_datasets.shuffle(seed=69)
+        self.datasets = small_train_dataset
+
+    def get_dataset(self):
+        return self.datasets
