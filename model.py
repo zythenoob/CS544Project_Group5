@@ -1,6 +1,3 @@
-import copy
-from typing import List, Optional, Tuple
-
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -28,7 +25,7 @@ class ExpertModel(nn.Module):
     def __init__(self, config, seq_len, head_size):
         super(ExpertModel, self).__init__()
         self.config = config
-        self.backbone = make_backbone(seq_len=seq_len, n_classes=head_size)
+        self.backbone = make_backbone(name=config.backbone, seq_len=seq_len, n_classes=head_size)
 
         self.ewc = None
         self.regularization_coef = config.regularization_coef
@@ -46,16 +43,16 @@ class ExpertModel(nn.Module):
         loss = task_loss + self.regularization_coef * reg_loss
         return loss
 
-    def forward(self, x):
-        output = self.backbone(**x)
+    def forward(self, x, y, attn_mask):
+        output = self.backbone(input_ids=x, labels=y, attention_mask=attn_mask)
         loss = output.loss
         logits = output.logits
         return logits, loss
 
     @torch.no_grad()
-    def get_preds(self, x):
+    def get_preds(self, x, y, attn_mask):
         assert not self.training
-        output = self.backbone(**x)
+        output = self.backbone(input_ids=x, labels=y, attention_mask=attn_mask)
         return output.logits
 
     def update(self, ewc):

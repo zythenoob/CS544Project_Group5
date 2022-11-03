@@ -17,12 +17,12 @@ class EWC(object):
     def __init__(self, device):
         self.device = device
 
-    def update(self, model, dataloader):
+    def update(self, model, dataloader, label_offset):
         model = deepcopy(model)
         self.params = {n: p for n, p in model.backbone.named_parameters() if p.requires_grad}
         self._means = {}
         # fisher
-        _precision_matrices = self._diag_fisher(model, dataloader, self.device)
+        _precision_matrices = self._diag_fisher(model, dataloader, self.device, label_offset)
         if hasattr(self, '_precision_matrices'):
             for k, v in self._precision_matrices.items():
                 self._precision_matrices[k] = 0.5 * self._precision_matrices[k] + 0.5 * v
@@ -34,7 +34,7 @@ class EWC(object):
         # release memory
         del model
 
-    def _diag_fisher(self, model, dataloader, device):
+    def _diag_fisher(self, model, dataloader, device, label_offset):
         precision_matrices = {}
         for n, p in deepcopy(self.params).items():
             p.data.zero_()
@@ -44,7 +44,9 @@ class EWC(object):
         for batch in dataloader:
             model.zero_grad()
             batch = batch_to_device(batch, device)
-            output, _ = model(batch)
+            x, y, attn_mask = batch['input_ids'], batch['labels'], batch['attention_mask']
+            y = y + label_offset
+            output, _ = model(x, y, attn_mask=attn_mask)
 
             label = output.max(1)[1].view(-1)
             loss = F.nll_loss(F.log_softmax(output, dim=1), label)
