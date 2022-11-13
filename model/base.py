@@ -23,17 +23,16 @@ class CLModel(nn.Module):
     def end_task(self, dl, offset):
         pass
 
-    def forward(self, x, y, attn_mask):
-        output = self.backbone(input_ids=x, labels=y, attention_mask=attn_mask, output_hidden_states=True)
-        loss = output.loss
+    def forward(self, x, attn_mask=None):
+        output = self.backbone(input_ids=x, attention_mask=attn_mask, output_hidden_states=True)
         logits = output.logits
         features = output.hidden_states
-        return logits, features, loss
+        return logits, features
 
     @torch.no_grad()
-    def get_preds(self, x, y, attn_mask):
+    def get_preds(self, x, attn_mask):
         assert not self.training
-        logits, _, _ = self.forward(x=x, y=y, attn_mask=attn_mask)
+        logits, _ = self.forward(x=x, attn_mask=attn_mask)
         return logits
 
 

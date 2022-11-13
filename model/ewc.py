@@ -25,7 +25,8 @@ class EWC(CLModel):
         self._precision_matrices = None
 
     def observe(self, x, y, attn_mask):
-        logits, _, loss = self.forward(x, y, attn_mask)
+        logits, _ = self.forward(x, attn_mask)
+        loss = F.cross_entropy(logits, y)
         penalty = self.penalty()
         loss = loss + penalty
         return logits, loss
@@ -57,9 +58,8 @@ class EWC(CLModel):
         for batch in dataloader:
             self.backbone.zero_grad()
             batch = batch_to_device(batch, self.device)
-            x, y, attn_mask = batch['input_ids'], batch['labels'], batch['attention_mask']
-            y = y.long() + label_offset
-            output, _, _ = self.forward(x, y, attn_mask)
+            x, attn_mask = batch['input_ids'], batch['attention_mask']
+            output, _ = self.forward(x, attn_mask=attn_mask)
 
             label = output.max(1)[1].view(-1)
             loss = F.nll_loss(F.log_softmax(output, dim=1), label)

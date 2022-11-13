@@ -18,10 +18,12 @@ class ER(CLModel):
         self.replay_size = config.batch_size
 
     def observe(self, x, y, attn_mask):
-        logits, _, loss = self.forward(x, y, attn_mask)
+        logits, _ = self.forward(x, attn_mask)
+        loss = F.cross_entropy(logits, y)
         if not self.buffer.is_empty():
             buffer_x, buffer_y, buffer_attn_mask = self.buffer.get_data(self.replay_size, self.device)
-            _, _, aux_loss = self.forward(buffer_x, buffer_y, buffer_attn_mask)
+            s_logits, _ = self.forward(buffer_x, attn_mask=buffer_attn_mask)
+            aux_loss = F.cross_entropy(s_logits, buffer_y)
             loss = loss + aux_loss
         self.buffer.add_data(x=x, y=y, attn_mask=attn_mask)
         return logits, loss

@@ -107,7 +107,7 @@ class ContinualNLP:
             batch = batch_to_device(batch, model.device)
             x, y, attn_mask = batch['input_ids'], batch['labels'], batch['attention_mask']
             y = y.long() + label_offset[task]
-            logits = model.get_preds(x, y, attn_mask=attn_mask)
+            logits = model.get_preds(x, attn_mask=attn_mask)
             y_pred_cil.append(logits.detach().argmax(-1).cpu().numpy())
             y_pred_til.append(mask_logits_class(logits.detach(), label_offset, task).argmax(-1).cpu().numpy())
             y_true.append(y.cpu().numpy())
