@@ -7,8 +7,6 @@ from typing import Tuple
 import numpy as np
 import torch
 
-from dataset.dataset import BufferDataset
-
 
 def reservoir(num_seen_examples: int, buffer_size: int) -> int:
     """
@@ -35,7 +33,7 @@ class Buffer:
         self.buffer_size = buffer_size
         self.device = device
         self.num_seen_examples = 0
-        self.attributes = ['x', 'y', 'logits']
+        self.attributes = ['x', 'y', 'logits', 'attn_mask']
 
     def to(self, device):
         self.device = device
@@ -48,7 +46,7 @@ class Buffer:
         return min(self.num_seen_examples, self.buffer_size)
 
     def init_tensors(self, x: torch.Tensor, y: torch.Tensor,
-                     logits: torch.Tensor) -> None:
+                     logits: torch.Tensor, attn_mask: torch.Tensor) -> None:
         """
         Initializes just the required tensors.
         :param examples: tensor containing the images
@@ -59,11 +57,11 @@ class Buffer:
         for attr_str in self.attributes:
             attr = eval(attr_str)
             if attr is not None and not hasattr(self, attr_str):
-                typ = torch.int64 if attr_str in ['y'] else torch.float32
+                typ = torch.int64 if attr_str in ['x', 'y', 'attn_mask'] else torch.float32
                 setattr(self, attr_str, torch.zeros((self.buffer_size,
                         *attr.shape[1:]), dtype=typ, device=self.device))
 
-    def add_data(self, x, y=None, logits=None):
+    def add_data(self, x, y, logits=None, attn_mask=None):
         """
         Adds the data to the memory buffer according to the reservoir strategy.
         :param examples: tensor containing the images
@@ -73,17 +71,39 @@ class Buffer:
         :return:
         """
         if not hasattr(self, 'x'):
-            self.init_tensors(x, y, logits)
+            self.init_tensors(x, y, logits, attn_mask)
 
         for i in range(x.shape[0]):
             index = reservoir(self.num_seen_examples, self.buffer_size)
             self.num_seen_examples += 1
             if index >= 0:
                 self.x[index] = x[i].to(self.device)
-                if y is not None:
-                    self.y[index] = y[i].to(self.device)
+                self.y[index] = y[i].to(self.device)
                 if logits is not None:
                     self.logits[index] = logits[i].to(self.device)
+                if attn_mask is not None:
+                    self.attn_mask[index] = attn_mask[i].to(self.device)
+
+    def get_data(self, size: int, device) -> Tuple:
+        """
+        Random samples a batch of size items.
+        :param size: the number of requested items
+        :param transform: the transformation to be applied (data augmentation)
+        :return:
+        """
+        if size > min(self.num_seen_examples, self.x.shape[0]):
+            size = min(self.num_seen_examples, self.x.shape[0])
+
+        choice = np.random.choice(min(self.num_seen_examples, self.x.shape[0]),
+                                  size=size, replace=False)
+
+        ret_tuple = (self.x[choice].to(device),)
+        for attr_str in self.attributes[1:]:
+            if hasattr(self, attr_str):
+                attr = getattr(self, attr_str)
+                ret_tuple += (attr[choice].to(device),)
+
+        return ret_tuple
 
     def is_empty(self) -> bool:
         """
@@ -106,10 +126,6 @@ class Buffer:
                 attr = getattr(self, attr_str)
                 ret_tuple += (attr,)
         return ret_tuple
-
-    def to_dataset(self):
-        data = self.get_all_data()
-        return BufferDataset(data[0], data[1], data[2])
 
     def empty(self) -> None:
         """

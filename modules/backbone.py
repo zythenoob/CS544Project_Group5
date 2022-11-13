@@ -20,7 +20,7 @@ class LinearModel(nn.Module):
 
 
 def make_backbone(name, seq_len, n_classes):
-    print("make backbone")
+    print("Make backbone:", name)
     model_class, key = name_to_backbone[name]
     if model_class == LinearModel:
         return LinearModel(seq_len, n_classes)

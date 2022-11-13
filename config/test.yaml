@@ -1,0 +1,16 @@
+train:
+  dataset: glue
+  dataset_root_path: data
+  save_dir: save
+  # hyperparams
+  epochs: 3              # training epoch per task
+  lr: 2e-5
+  batch_size: 32
+  device: cuda:0
+  # cl setting
+  method: er
+  backbone: distilbert
+  buffer_size: 1000
+  reg_coef: 100
+  # debug
+  debug: true
