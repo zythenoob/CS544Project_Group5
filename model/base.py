@@ -45,6 +45,9 @@ def get_model(config):
     elif name == 'er':
         from model.er import ER
         model_class = ER
+    elif name == 'derpp':
+        from model.derpp import DERPP
+        model_class = DERPP
     else:
         raise NotImplementedError
     return model_class(config)
