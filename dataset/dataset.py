@@ -37,23 +37,6 @@ def create_dataset(configs):
     return ds
 
 
-class BufferDataset(Dataset):
-    def __init__(self, x, y, logits):
-        self.x = x
-        self.y = y
-        self.logits = logits
-
-    def __getitem__(self, idx):
-        return {
-            'x': self.x[idx],
-            'y': self.y[idx],
-            'logits': self.logits[idx]
-        }
-
-    def __len__(self):
-        return len(self.x)
-
-
 class TaskStream:
     def __init__(self, config):
         self.train_loader = None
