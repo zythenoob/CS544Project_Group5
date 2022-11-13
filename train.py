@@ -59,7 +59,7 @@ class ContinualNLP:
             for i, batch in enumerate(train_dataloader):
                 batch = batch_to_device(batch, device)
                 x, y, attn_mask = batch['input_ids'], batch['labels'], batch['attention_mask']
-                y = y + label_offset
+                y = y.long() + label_offset
                 logits, loss = model.observe(x, y, attn_mask=attn_mask)
                 optimizer.zero_grad()
                 loss.backward()
@@ -106,7 +106,7 @@ class ContinualNLP:
         for batch in val_loader:
             batch = batch_to_device(batch, model.device)
             x, y, attn_mask = batch['input_ids'], batch['labels'], batch['attention_mask']
-            y = y + label_offset[task]
+            y = y.long() + label_offset[task]
             logits = model.get_preds(x, y, attn_mask=attn_mask)
             y_pred_cil.append(logits.detach().argmax(-1).cpu().numpy())
             y_pred_til.append(mask_logits_class(logits.detach(), label_offset, task).argmax(-1).cpu().numpy())

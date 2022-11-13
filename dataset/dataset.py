@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 from torchvision.datasets import MNIST
@@ -56,8 +58,10 @@ class TaskStream:
 
     def new_task(self):
         # create surprise task
-        train_data = self.task_class(root=self.config.dataset_root_path, task_id=self.task_id, split='train').get_dataset()
-        val_data = self.task_class(root=self.config.dataset_root_path, task_id=self.task_id, split='validation').get_dataset()
+        train_data = self.task_class(root=self.config.dataset_root_path, task_id=self.task_id,
+                                     split='train').get_dataset()
+        val_data = self.task_class(root=self.config.dataset_root_path, task_id=self.task_id,
+                                   split='validation').get_dataset()
 
         self.train_loader = DataLoader(
             train_data,
@@ -82,10 +86,10 @@ class TaskStream:
 
 
 class SplitGLUE:
-    HEAD_SIZE = 10
-    N_TASKS = 5
+    HEAD_SIZE = 17
+    N_TASKS = 7
     SEQ_LENGTH = 128
-    task_names = ['cola', 'sst2', 'mrpc', 'qqp', 'rte']
+    task_names = ['cola', 'sst2', 'mrpc', 'qqp', 'rte', 'qnli', 'stsb']
     label_offset = [
         0,
         2,
@@ -93,6 +97,8 @@ class SplitGLUE:
         6,
         8,
         10,
+        12,
+        17
     ]
 
     def __init__(self, root, task_id, split, padding=True):
@@ -108,7 +114,7 @@ class SplitGLUE:
         sentence1_key, sentence2_key = glue_task_to_keys[self.task_name]
         # tokenize
         tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased")
-        max_seq_length = min(128, tokenizer.model_max_length)
+        max_seq_length = min(self.SEQ_LENGTH, tokenizer.model_max_length)
         if padding:
             padding = "max_length"
         else:
@@ -117,22 +123,24 @@ class SplitGLUE:
         def preprocess(examples):
             args = (
                 (examples[sentence1_key],) if sentence2_key is None else (
-                examples[sentence1_key], examples[sentence2_key])
+                    examples[sentence1_key], examples[sentence2_key])
             )
             result = tokenizer(*args, padding=padding, max_length=max_seq_length, truncation=True)
+            if self.task_name == 'stsb':
+                result['label'] = [int(y) if y != 5.0 else 4 for y in examples['label']]
             return result
 
         tokenized_datasets = self.dataset.map(preprocess, batched=True)
+        tokenized_datasets = tokenized_datasets.map()
         tokenized_datasets = tokenized_datasets.remove_columns(
             ['idx'] + [x for x in glue_task_to_keys[self.task_name] if x is not None])
         tokenized_datasets = tokenized_datasets.rename_column("label", "labels")
         tokenized_datasets.set_format("torch")
 
-        small_train_dataset = tokenized_datasets.shuffle(seed=42)
-        self.datasets = small_train_dataset
+        self.dataset = tokenized_datasets
 
     def get_dataset(self):
-        return self.datasets
+        return self.dataset
 
 
 class SplitMNIST(Dataset):

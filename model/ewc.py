@@ -58,7 +58,7 @@ class EWC(CLModel):
             self.backbone.zero_grad()
             batch = batch_to_device(batch, self.device)
             x, y, attn_mask = batch['input_ids'], batch['labels'], batch['attention_mask']
-            y = y + label_offset
+            y = y.long() + label_offset
             output, _, _ = self.forward(x, y, attn_mask)
 
             label = output.max(1)[1].view(-1)

@@ -25,7 +25,7 @@ def make_backbone(name, seq_len, n_classes):
     if model_class == LinearModel:
         return LinearModel(seq_len, n_classes)
     else:
-        return model_class.from_pretrained(key, num_labels=n_classes)
+        return model_class.from_pretrained(key, num_labels=n_classes, problem_type='single_label_classification')
 
 
 name_to_backbone = {
