@@ -1,18 +1,35 @@
-from typing import Literal
+from dataclasses import dataclass
+from omegaconf import OmegaConf
 
 
-class ModelConfig:
-    regularization_coef: float = 25
-
+@dataclass
 class TrainConfig:
     # data
     dataset: str = "mnist"
     dataset_root_path: str = None
+    save_dir: str = 'save'
+    # cl
+    method: str = 'ewc'
+    backbone: str = 'distilbert'
     # train
-    task_type: Literal["cil", "dil"] = "cil"
     epochs: int = 3              # training epoch per task
     lr: float = 0.1
     batch_size: int = 128
     device: str = 'cuda:0'
-    # buffer
+    seq_len: int = 256
+    head_size: int = 10
+    # other args
     buffer_size: float = 1000
+    reg_coef: float = 100
+    # debug
+    debug: bool = False
+
+    def __init__(self, values):
+        super(TrainConfig, self).__init__()
+        for k, v in values.items():
+            setattr(self, k, v)
+
+
+def load_config(path):
+    config = OmegaConf.load(path)
+    return TrainConfig(config['train'])
