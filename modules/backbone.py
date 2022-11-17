@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from transformers import DistilBertForSequenceClassification, GPT2ForSequenceClassification
 
 
 class LinearModel(nn.Module):
@@ -18,5 +19,17 @@ class LinearModel(nn.Module):
         return logits
 
 
-def make_backbone(seq_len, n_classes):
-    return LinearModel(seq_len, n_classes)
+def make_backbone(name, seq_len, n_classes):
+    print("Make backbone:", name)
+    model_class, key = name_to_backbone[name]
+    if model_class == LinearModel:
+        return LinearModel(seq_len, n_classes)
+    else:
+        return model_class.from_pretrained(key, num_labels=n_classes, problem_type='single_label_classification')
+
+
+name_to_backbone = {
+    'linear': (LinearModel, None),
+    'distilbert': (DistilBertForSequenceClassification, "distilbert-base-uncased"),
+    'gpt2': (GPT2ForSequenceClassification, "gpt2"),
+}
