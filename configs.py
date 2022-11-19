@@ -16,11 +16,14 @@ class TrainConfig:
     lr: float = 0.1
     batch_size: int = 128
     device: str = 'cuda:0'
+    n_tasks: int = 7
     seq_len: int = 256
     head_size: int = 10
     # other args
-    buffer_size: float = 1000
+    buffer_size: float = 100
     reg_coef: float = 100
+    distill_iter: int = 200
+    distill_lr: int = 0.001
     # debug
     debug: bool = False
 

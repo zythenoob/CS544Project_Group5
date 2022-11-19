@@ -23,8 +23,11 @@ class CLModel(nn.Module):
     def end_task(self, dl, offset):
         pass
 
-    def forward(self, x, attn_mask=None):
-        output = self.backbone(input_ids=x, attention_mask=attn_mask, output_hidden_states=True)
+    def forward(self, x=None, attn_mask=None, inputs_embeds=None):
+        if inputs_embeds is not None:
+            output = self.backbone(inputs_embeds=inputs_embeds, attention_mask=attn_mask, output_hidden_states=True)
+        else:
+            output = self.backbone(input_ids=x, attention_mask=attn_mask, output_hidden_states=True)
         logits = output.logits
         features = output.hidden_states
         return logits, features
@@ -47,6 +50,9 @@ def get_model(config):
     elif name == 'derpp':
         from model.derpp import DERPP
         model_class = DERPP
+    elif name == 'ours':
+        from model.ours import Ours
+        model_class = Ours
     else:
         raise NotImplementedError
     return model_class(config)

@@ -23,6 +23,7 @@ class ContinualNLP:
         self.task_stream = TaskStream(train_config)
         self.train_config.seq_len = self.task_stream.seq_len
         self.train_config.head_size = self.task_stream.n_classes
+        self.train_config.n_tasks = self.task_stream.n_tasks
         # model
         self.model = get_model(config=self.train_config).to(self.device)
         self.buffer = Buffer(buffer_size=train_config.buffer_size, device='cpu')

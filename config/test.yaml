@@ -8,9 +8,11 @@ train:
   batch_size: 32
   device: cuda:0
   # cl setting
-  method: er
+  method: ours
   backbone: distilbert
-  buffer_size: 2000
+  buffer_size: 100
   reg_coef: 100
+  distill_iter: 200
+  distill_lr: 0.001
   # debug
   debug: false
