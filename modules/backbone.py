@@ -19,6 +19,16 @@ class LinearModel(nn.Module):
         return logits
 
 
+class LinearProbe(nn.Module):
+    def __init__(self, n_tasks, n_hidden):
+        super().__init__()
+        hidden_dim = 768
+        self.probs = nn.ModuleList([nn.Linear(hidden_dim, n_tasks) for _ in range(n_hidden)])
+
+    def forward(self, hiddens):
+        return [self.probs[i](h) for i, h in enumerate(hiddens)]
+
+
 def make_backbone(name, seq_len, n_classes):
     print("Make backbone:", name)
     model_class, key = name_to_backbone[name]
