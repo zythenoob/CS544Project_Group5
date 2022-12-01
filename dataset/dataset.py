@@ -1,7 +1,8 @@
 import math
 
 import numpy as np
-from torch.utils.data import Dataset, DataLoader
+import torch
+from torch.utils.data import Dataset, DataLoader, ConcatDataset
 from torchvision.datasets import MNIST
 from transformers import DistilBertTokenizer
 from datasets import load_dataset
@@ -37,6 +38,19 @@ def create_dataset(configs):
     else:
         raise NotImplementedError
     return ds
+
+
+class AuxDataset(Dataset):
+    def __init__(self, x, y, attn_mask):
+        self.x = x
+        self.y = y
+        self.attn_mask = attn_mask
+
+    def __getitem__(self, idx):
+        return {'input_ids': self.x[idx], 'labels': self.y[idx], 'attention_mask': self.attn_mask[idx]}
+
+    def __len__(self):
+        return len(self.x)
 
 
 class TaskStream:
@@ -143,6 +157,29 @@ class SplitGLUE:
         return self.dataset
 
 
+class ProbeGLUE:
+    HEAD_SIZE = 17
+    N_TASKS = 7
+    SEQ_LENGTH = 128
+    task_names = ['probe_glue']
+    label_offset = [
+        0,
+        17
+    ]
+
+    def __init__(self, root, task_id, split):
+        self.glue = []
+        for i, _ in enumerate(SplitGLUE.task_names):
+            data = SplitGLUE(root=root, task_id=i, split=split).get_dataset()
+            labels = torch.ones_like(data['labels']).long() * i
+            ds = AuxDataset(x=data['input_ids'], y=labels, attn_mask=data['attention_mask'])
+            self.glue.append(ds)
+        self.dataset = ConcatDataset(self.glue)
+
+    def get_dataset(self):
+        return self.dataset
+
+
 class SplitMNIST(Dataset):
     HEAD_SIZE = 10
     N_TASKS = 5
@@ -187,4 +224,5 @@ class SplitMNIST(Dataset):
 task_class_names = {
     'mnist': SplitMNIST,
     'glue': SplitGLUE,
+    'probe': ProbeGLUE,
 }
