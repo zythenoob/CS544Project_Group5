@@ -23,26 +23,14 @@ glue_task_to_keys = {
 }
 
 label_choice = {
-    0: ['hep-ph', 'math.CO', 'physics.gen-ph', 'math.CA', 'cond-mat.mes-hall', 'gr-qc', 'cond-mat.mtrl-sci',
-        'astro-ph', 'math.NT', 'hep-th', 'math.PR', 'hep-ex', 'nlin.PS', 'math.NA', 'cond-mat.str-el', 'math.RA',
-        'physics.optics', 'q-bio.PE', 'q-bio.QM', 'math.OA', 'math.QA', 'cond-mat.stat-mech', 'quant-ph', 'cs.NE',
-        'physics.ed-ph', 'math.DG', 'cond-mat.soft', 'physics.pop-ph', 'nucl-th', 'math.FA', 'cs.DS'],
-    1: ['math.AG', 'math.DS', 'physics.soc-ph', 'math-ph', 'cond-mat.other', 'physics.data-an', 'cs.CE', 'math.GR',
-        'hep-lat', 'cond-mat.supr-con', 'nlin.SI', 'cs.IT', 'math.AC', 'math.SG', 'cs.CC', 'math.GT', 'nlin.CD',
-        'math.CV', 'math.AP', 'math.RT', 'q-bio.OT', 'physics.plasm-ph', 'physics.bio-ph', 'nlin.CG', 'cs.DM',
-        'nucl-ex', 'physics.flu-dyn', 'physics.comp-ph', 'math.MG', 'physics.atom-ph', 'math.ST'],
-    2: ['physics.chem-ph', 'math.AT', 'physics.geo-ph', 'q-bio.NC', 'q-fin.RM', 'cond-mat.dis-nn', 'q-bio.SC',
-        'q-bio.BM', 'math.OC', 'cs.CR', 'math.LO', 'cs.NI', 'q-fin.PR', 'physics.class-ph', 'q-fin.GN', 'q-fin.ST',
-        'cs.PF', 'stat.ME', 'q-fin.CP', 'math.GM', 'math.KT', 'physics.atm-clus', 'physics.acc-ph', 'math.SP',
-        'physics.hist-ph', 'cs.LG', 'cs.CY', 'q-bio.GN', 'cs.CG', 'cs.CV', 'math.HO'],
-    3: ['cs.SE', 'physics.ins-det', 'cs.OH', 'cs.PL', 'q-bio.CB', 'cs.AI', 'physics.space-ph', 'nlin.AO',
-        'q-bio.MN', 'cs.IR', 'cs.GT', 'cs.LO', 'stat.AP', 'cs.SC', 'cs.DC', 'cs.CL', 'math.CT', 'q-fin.PM',
-        'physics.med-ph', 'cs.HC', 'physics.ao-ph', 'cs.AR', 'cs.DL', 'cs.MS', 'cs.RO', 'cs.DB', 'math.GN',
-        'q-bio.TO', 'cs.GL', 'cs.MA', 'cs.MM'],
-    4: ['stat.ML', 'cs.OS', 'q-fin.TR', 'cs.NA', 'cs.SD', 'stat.CO', 'cs.GR', 'cs.FL', 'cond-mat.quant-gas',
-        'astro-ph.HE', 'astro-ph.SR', 'astro-ph.GA', 'astro-ph.CO', 'astro-ph.IM', 'astro-ph.EP', 'cs.SI',
-        'stat.OT', 'cs.SY', 'eess.SY', 'cs.ET', 'eess.SP', 'q-fin.EC', 'q-fin.MF', 'physics.app-ph', 'econ.GN',
-        'eess.AS', 'econ.TH', 'eess.IV', 'econ.EM', 'cond-mat', 'supr-con'],
+    0: ['econ.GN', 'econ.EM', 'econ.TH'],
+    1: ['math.GT', 'math.KT', 'math.AC', 'math.AP', 'math.CT', 'math.QA', 'math.PR', 'math.FA', 'math.OC', 'math.NT', 'math.RA', 'math.AT', 'math.DS', 'math.SG', 'math.MG', 'math.SP', 'math.GN', 'math.CA', 'math.CO', 'math.RT', 'math.HO', 'math.AG', 'math.OA', 'math.ST', 'math.GM', 'math.DG', 'math.LO', 'math.CV', 'math.GR', 'math.NA'],
+    2: ['q-bio.PE', 'q-bio.SC', 'q-bio.QM', 'q-bio.TO', 'q-bio.GN', 'q-bio.NC', 'q-bio.OT', 'q-bio.MN', 'q-bio.BM', 'q-bio.CB'],
+    3: ['cs.CR', 'cs.DS', 'cs.NI', 'cs.HC', 'cs.MA', 'cs.DM', 'cs.RO', 'cs.PL', 'cs.AI', 'cs.CV', 'cs.SE', 'cs.SY', 'cs.ET', 'cs.CG', 'cs.CY', 'cs.CE', 'cs.CL', 'cs.LO', 'cs.GR', 'cs.AR', 'cs.PF', 'cs.GL', 'cs.OS', 'cs.OH', 'cs.IT', 'cs.DL', 'cs.SD', 'cs.GT', 'cs.LG', 'cs.NE', 'cs.DB', 'cs.MM', 'cs.SC', 'cs.SI', 'cs.MS', 'cs.NA', 'cs.FL', 'cs.IR', 'cs.CC', 'cs.DC'],
+    4: ['eess.SY', 'eess.SP', 'eess.IV', 'eess.AS'],
+    5: ['cond-mat.supr-con', 'physics.atom-ph', 'cond-mat.quant-gas', 'physics.atm-clus', 'physics.plasm-ph', 'physics.space-ph', 'physics.pop-ph', 'physics.chem-ph', 'astro-ph.HE', 'astro-ph.IM', 'astro-ph.EP', 'nucl-ex', 'cond-mat.soft', 'cond-mat.other', 'nlin.AO', 'astro-ph.GA', 'hep-ex', 'physics.soc-ph', 'supr-con', 'quant-ph', 'physics.data-an', 'cond-mat', 'math-ph', 'hep-ph', 'nucl-th', 'physics.hist-ph', 'cond-mat.mtrl-sci', 'astro-ph', 'physics.ao-ph', 'physics.ed-ph', 'cond-mat.stat-mech', 'physics.class-ph', 'hep-th', 'hep-lat', 'physics.bio-ph', 'physics.flu-dyn', 'astro-ph.SR', 'physics.app-ph', 'physics.ins-det', 'astro-ph.CO', 'nlin.PS', 'nlin.CD', 'physics.gen-ph', 'physics.optics', 'cond-mat.dis-nn', 'nlin.SI', 'gr-qc', 'nlin.CG', 'physics.comp-ph', 'physics.geo-ph', 'physics.acc-ph', 'physics.med-ph', 'cond-mat.str-el', 'cond-mat.mes-hall'],
+    6: ['q-fin.TR', 'q-fin.EC', 'q-fin.ST', 'q-fin.CP', 'q-fin.MF', 'q-fin.RM', 'q-fin.GN', 'q-fin.PM', 'q-fin.PR'],
+    7: ['stat.ML', 'stat.ME', 'stat.OT', 'stat.CO', 'stat.AP'],
 }
 
 
@@ -152,7 +140,7 @@ class SplitGLUE:
             )
             result = tokenizer(*args, padding=padding, max_length=max_seq_length, truncation=True)
             if self.task_name == 'stsb':
-                result['label'] = [int(y) if y != 5.0 else 4 for y in examples['label']]
+                result['label'] = [int(y) if y != 5.0 else 4 for y in examples['categories']]
             return result
 
         tokenized_datasets = self.dataset.map(preprocess, batched=True)
@@ -211,18 +199,21 @@ class SplitMNIST(Dataset):
 
 class SplitArxiv(Dataset):
     HEAD_SIZE = 155
-    N_TASKS = 5
+    N_TASKS = 8
     SEQ_LENGTH = 512
 
     label_offset = [
         0,
-        31,
-        62,
-        93,
-        124
+        3,
+        33,
+        43,
+        83,
+        87,
+        141,
+        150,
+        155
     ]
-
-    task_names = ['0', '1', '2', '3', '4']
+    task_names = ['0', '1', '2', '3', '4', '5', '6', '7']
 
     def __init__(self, root, task_id, split, padding=True):
         super().__init__()
@@ -230,15 +221,17 @@ class SplitArxiv(Dataset):
         self.split = split
         self.task_id = task_id
         self.path_name = split + str(task_id) + ".hf"
-        if(os.path.exists(self.path_name)):
-            self.dataset = load_from_disk(self.path_name)
+        # if(os.path.exists(self.path_name)):
+        #     self.dataset = load_from_disk(self.path_name)
+        if 0:
+            pass
         else:
             df = pd.read_csv("papers_dataset.csv",
                              low_memory=False)
             #         df = csv_data
             train_data = df.sample(frac=0.8, random_state=0, axis=0)
             test_data = df[~df.index.isin(train_data.index)]
-            df = train_data if split == "train" else test_data
+            df = train_data.sample(frac=0.1, random_state=0, axis=0) if split == "train" else test_data.sample(frac=0.1, random_state=0, axis=0)
             self.data = df.loc[df['categories'].isin(label_choice[task_id])]
             self.dataset = dts.from_pandas(self.data)
 
@@ -253,6 +246,7 @@ class SplitArxiv(Dataset):
                 args = ((examples["title"], examples["abstract"]))
                 result = tokenizer(*args, padding=padding, max_length=max_seq_length, truncation=True)
                 result['label'] = [label_choice[task_id].index(xx) for xx in examples["categories"]]
+                print([label_choice[task_id].index(xx) for xx in examples["categories"]])
                 return result
 
             tokenized_datasets = self.dataset.map(preprocess, batched=True)
