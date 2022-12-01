@@ -10,16 +10,16 @@ from model.base import CLModel
 from modules.memory import Buffer
 
 '''
-    Experience Replay + Dataset Distillation
+    Experience Replay + Data Synthesizing
 '''
-class ERDD(CLModel):
+class ERSyn(CLModel):
     def __init__(self, config):
         super().__init__(config)
         self.buffer = Buffer(buffer_size=config.buffer_size, device='cpu')
-        self.sample_per_task = config.buffer_size
+        self.sample_per_task = config.buffer_size // config.n_tasks
         self.replay_size = config.batch_size
-        self.distill_iter = config.distill_iter
-        self.distill_lr = config.distill_lr
+        self.syn_iter = config.syn_iter
+        self.syn_lr = config.syn_lr
 
     def observe(self, x, y, attn_mask):
         logits, _ = self.forward(x, attn_mask)
@@ -34,36 +34,12 @@ class ERDD(CLModel):
 
     def end_task(self, dataloader, label_offset):
         self.backbone.eval()
-        # selected = self._random_sampling(dataloader, k=self.sample_per_task)
-        selected = self._importance_sampling(dataloader, label_offset, k=self.sample_per_task)
+        selected = self._random_sampling(dataloader, k=self.sample_per_task)
         s_x, s_y, s_attn_mask = self._dataset_distillation(
             *self._sample_by_idx(dataloader, label_offset, selected)
         )
         self.buffer.add_data(x=torch.ones_like(s_attn_mask), y=s_y, logits=s_x, attn_mask=s_attn_mask)
         self.backbone.train()
-
-    def _importance_sampling(self, dataloader, label_offset, k=50):
-        samples = []
-        total = len(dataloader.dataset)
-        params = [p for p in list(self.backbone.parameters()) if p.requires_grad]
-        progress = tqdm(range(total), desc='Sampling datapoints', position=0, leave=True)
-        for idx in range(total):
-            x = dataloader.dataset[idx]['input_ids']
-            y = dataloader.dataset[idx]['labels']
-            y = (y + label_offset).long()
-            m = dataloader.dataset[idx]['attention_mask']
-            # compute grad norm
-            self.backbone.zero_grad()
-            output = self.backbone(input_ids=x.unsqueeze(0), attention_mask=m.unsqueeze(0))
-            loss = F.cross_entropy(output.logits, target=y.unsqueeze(0))
-            grads = torch.autograd.grad(loss, params, retain_graph=True, allow_unused=True)
-            grad_norm = (torch.concat([g.flatten() for g in grads if g is not None]) ** 2).sum().cpu()
-            samples.append((idx, grad_norm))
-            progress.update(1)
-        self.backbone.zero_grad()
-        # select k smallest grad norms
-        samples = sorted(samples, key=lambda v: v[1])[:k]
-        return [idx for idx, _ in samples]
 
     def _random_sampling(self, dataloader, k=50):
         random_idx = np.random.choice(np.arange(len(dataloader.dataset)), size=k, replace=False)
@@ -75,16 +51,17 @@ class ERDD(CLModel):
         x = sample['input_ids']
         emb = self.backbone.distilbert.embeddings(x.to(self.device)).cpu()
         y = sample['labels']
-        y = y + label_offset
+        y = (y + label_offset).long()
         m = sample['attention_mask']
         return emb, y, m
 
     def _dataset_distillation(self, gen_x, gen_y, gen_mask):
         gen_x, gen_y, gen_mask = gen_x.to(self.device), gen_y.to(self.device), gen_mask.to(self.device)
+        gen_x = torch.normal(mean=1.0, std=0.1, size=gen_x.shape)
         gen_x = torch.nn.Parameter(gen_x, requires_grad=True)
-        optimizer = Adam([gen_x], lr=self.distill_lr)
-        progress = tqdm(range(self.distill_iter), position=0, leave=True)
-        for e in range(self.distill_iter):
+        optimizer = Adam([gen_x], lr=self.syn_lr)
+        progress = tqdm(range(self.syn_iter), position=0, leave=True)
+        for e in range(self.syn_iter):
             optimizer.zero_grad()
             # shuffle
             perm = torch.randperm(len(gen_x))
