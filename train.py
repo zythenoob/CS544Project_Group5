@@ -26,9 +26,9 @@ class ContinualNLP:
         self.train_config.n_tasks = self.task_stream.n_tasks
         # model
         self.model = get_model(config=self.train_config).to(self.device)
-        self.buffer = Buffer(buffer_size=train_config.buffer_size, device='cpu')
         self.optimizer = AdamW(self.model.parameters(), lr=train_config.lr)
         self.train_tqdm = tqdm(range(self.task_stream.n_tasks))
+        self.bwt = {}
 
     def run(self):
         for t in range(self.task_stream.n_tasks):
@@ -87,33 +87,36 @@ class ContinualNLP:
     def evaluate(self, val_loaders):
         print()
         print('Evaluating', flush=True)
-        total_acc = [0, 0]
+        total_acc = 0
+        total_bwt = 0
         for i, vl in enumerate(val_loaders):
-            cil_pred, til_pred, y_true = self.get_preds(self.model, val_loader=vl, task=i)
+            cil_pred, y_true = self.get_preds(self.model, val_loader=vl, task=i)
             cil_acc = accuracy_score(y_true, cil_pred)
-            til_acc = accuracy_score(y_true, til_pred)
-            total_acc[0] += cil_acc
-            total_acc[1] += til_acc
-            print(f'Task {i}: cil acc {round(cil_acc * 100, 2)}, til acc {round(til_acc * 100, 2)}', flush=True)
-        print(f'Average cil acc {round((total_acc[0] / len(val_loaders)) * 100, 2)}, '
-              f'til acc {round((total_acc[1] / len(val_loaders)) * 100, 2)}', flush=True)
+            total_acc += cil_acc
+            if i not in self.bwt:
+                self.bwt[i] = cil_acc
+            bwt = total_acc - self.bwt[i]
+            print(f'Task {i}: cil acc {round(cil_acc * 100, 2)}, bwt {round(bwt * 100, 2)}', flush=True)
+        total_acc = round((total_acc / len(val_loaders)) * 100, 2)
+        total_bwt = round((total_bwt / len(val_loaders)) * 100, 2) if len(val_loaders) > 1 else 0
+        print(f'Average cil acc {total_acc}, '
+              f'bwt {total_bwt}', flush=True)
         print()
 
     @torch.no_grad()
     def get_preds(self, model, val_loader, task):
         label_offset = self.task_stream.label_offset
         model.eval()
-        y_pred_cil, y_pred_til, y_true = [], [], []
+        y_pred_cil, y_true = [], []
         for batch in val_loader:
             batch = batch_to_device(batch, model.device)
             x, y, attn_mask = batch['input_ids'], batch['labels'], batch['attention_mask']
             y = y.long() + label_offset[task]
             logits = model.get_preds(x, attn_mask=attn_mask)
             y_pred_cil.append(logits.detach().argmax(-1).cpu().numpy())
-            y_pred_til.append(mask_logits_class(logits.detach(), label_offset, task).argmax(-1).cpu().numpy())
             y_true.append(y.cpu().numpy())
         model.train()
-        return np.concatenate(y_pred_cil), np.concatenate(y_pred_til), np.concatenate(y_true)
+        return np.concatenate(y_pred_cil), np.concatenate(y_true)
 
     def save_model(self):
         save_dir = os.path.join(self.train_config.save_dir, self.train_config.method)
