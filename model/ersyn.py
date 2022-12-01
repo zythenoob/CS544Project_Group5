@@ -35,7 +35,7 @@ class ERSyn(CLModel):
     def end_task(self, dataloader, label_offset):
         self.backbone.eval()
         selected = self._random_sampling(dataloader, k=self.sample_per_task)
-        s_x, s_y, s_attn_mask = self._dataset_distillation(
+        s_x, s_y, s_attn_mask = self._data_synthesizing(
             *self._sample_by_idx(dataloader, label_offset, selected)
         )
         self.buffer.add_data(x=torch.ones_like(s_attn_mask), y=s_y, logits=s_x, attn_mask=s_attn_mask)
@@ -55,22 +55,23 @@ class ERSyn(CLModel):
         m = sample['attention_mask']
         return emb, y, m
 
-    def _dataset_distillation(self, gen_x, gen_y, gen_mask):
+    def _data_synthesizing(self, gen_x, gen_y, gen_mask):
         gen_x, gen_y, gen_mask = gen_x.to(self.device), gen_y.to(self.device), gen_mask.to(self.device)
-        gen_x = torch.normal(mean=1.0, std=0.1, size=gen_x.shape)
-        gen_x = torch.nn.Parameter(gen_x, requires_grad=True)
-        optimizer = Adam([gen_x], lr=self.syn_lr)
-        progress = tqdm(range(self.syn_iter), position=0, leave=True)
-        for e in range(self.syn_iter):
+        gen_x = torch.nn.Parameter(torch.randn(*gen_x.shape, requires_grad=True, device=self.device))
+        optimizer = Adam([gen_x], lr=self.distill_lr, weight_decay=0)
+        progress = tqdm(range(self.distill_iter), position=0, leave=True)
+        minibatch_size = 32
+        for e in range(self.distill_iter):
             optimizer.zero_grad()
             # shuffle
             perm = torch.randperm(len(gen_x))
             avg_loss = []
-            for i in range(len(gen_x)):
-                x, y, m = gen_x[perm][i], gen_y[perm][i], gen_mask[perm][i]
+            for i in range(0, len(gen_x), minibatch_size):
+                x, y, m = gen_x[perm][i: i + minibatch_size], gen_y[perm][i: i + minibatch_size], gen_mask[perm][
+                                                                                                  i: i + minibatch_size]
                 self.backbone.zero_grad()
-                output = self.backbone(inputs_embeds=x.unsqueeze(0), attention_mask=m.unsqueeze(0))
-                loss = F.cross_entropy(output.logits, target=y.unsqueeze(0))
+                output = self.backbone(inputs_embeds=x, attention_mask=m)
+                loss = F.cross_entropy(output.logits, target=y)
                 avg_loss.append(loss.item())
                 loss.backward()
             optimizer.step()
