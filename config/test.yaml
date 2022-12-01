@@ -2,17 +2,17 @@ train:
   dataset: glue
   dataset_root_path: data
   save_dir: save
-  # hyperparams
+  # hyper-params
   epochs: 3              # training epoch per task
   lr: 2e-5
   batch_size: 32
   device: cuda:0
   # cl setting
-  method: ours
+  method: ersyn
   backbone: distilbert
   buffer_size: 100
   reg_coef: 100
-  distill_iter: 200
+  distill_iter: 2000
   distill_lr: 0.001
   # debug
-  debug: false
+  debug: true

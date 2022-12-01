@@ -22,8 +22,8 @@ class TrainConfig:
     # other args
     buffer_size: float = 100
     reg_coef: float = 100
-    distill_iter: int = 200
-    distill_lr: int = 0.001
+    syn_iter: int = 200
+    syn_lr: float = 0.001
     # debug
     debug: bool = False
 

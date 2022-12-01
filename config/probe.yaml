@@ -1,0 +1,12 @@
+train:
+  dataset: probe
+  dataset_root_path: data
+  save_dir: save
+  # hyper-params
+  method: er
+  epochs: 1
+  lr: 1e-4
+  batch_size: 32
+  device: cuda:0
+  # debug
+  debug: false
