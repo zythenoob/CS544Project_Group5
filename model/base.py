@@ -50,9 +50,9 @@ def get_model(config):
     elif name == 'derpp':
         from model.derpp import DERPP
         model_class = DERPP
-    elif name == 'ours':
-        from model.ours import Ours
-        model_class = Ours
+    elif name == 'ersyn':
+        from model.ersyn import ERSyn
+        model_class = ERSyn
     else:
         raise NotImplementedError
     return model_class(config)
